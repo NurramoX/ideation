@@ -1,0 +1,78 @@
+#!/bin/sh
+_=[[
+exec nvim --clean --headless -l "$0" "$@"
+]]
+-- A fake `idea` CLI for the plugin tests: a shell script that re-runs itself
+-- as Lua under `nvim -l`. It keeps each idea as $FAKE_IDEA_DIR/<id>.json
+-- ({title, body, version}) and appends every call ({argv, stdin}) to
+-- $FAKE_IDEA_DIR/calls.jsonl. It implements only the verbs the plugin uses.
+
+local dir = assert(os.getenv("FAKE_IDEA_DIR"), "FAKE_IDEA_DIR is not set")
+
+local function readfile(path)
+  local f = io.open(path, "rb")
+  if not f then return nil end
+  local data = f:read("a")
+  f:close()
+  return data
+end
+
+local function writefile(path, data, mode)
+  local f = assert(io.open(path, mode or "wb"))
+  f:write(data)
+  f:close()
+end
+
+local function idea_path(id) return dir .. "/" .. id .. ".json" end
+
+local function load(id)
+  local data = readfile(idea_path(id))
+  return data and vim.json.decode(data)
+end
+
+local function save(id, idea) writefile(idea_path(id), vim.json.encode(idea)) end
+
+local function fail(code, msg)
+  io.stderr:write("idea: " .. msg .. "\n")
+  os.exit(code)
+end
+
+local argv = {}
+for i = 1, #arg do argv[i] = arg[i] end
+local verb = argv[1]
+local stdin = verb == "write" and io.read("a") or nil
+writefile(dir .. "/calls.jsonl", vim.json.encode({ argv = argv, stdin = stdin }) .. "\n", "ab")
+
+if verb == "show" then
+  -- show --json <id>
+  local id = tonumber(argv[3])
+  local idea = load(id) or fail(3, "idea " .. argv[3] .. ": not found")
+  io.stdout:write(vim.json.encode({
+    id = id,
+    title = idea.title,
+    tags = {},
+    attributes = { status = "raw" },
+    body = idea.body,
+    version = idea.version,
+  }) .. "\n")
+elseif verb == "write" then
+  -- write <id> --version <n> --json
+  local id, version = tonumber(argv[2]), tonumber(argv[4])
+  local idea = load(id) or fail(3, "idea " .. argv[2] .. ": not found")
+  if version ~= idea.version then
+    fail(4, ("idea %d changed: you had version %d, it is now %d"):format(id, version, idea.version))
+  end
+  if stdin ~= idea.body then
+    idea.body, idea.version = stdin, idea.version + 1
+    save(id, idea)
+  end
+  io.stdout:write(vim.json.encode({ id = id, version = idea.version }) .. "\n")
+elseif verb == "add" then
+  -- add -- <title>
+  local id = 1
+  while load(id) do id = id + 1 end
+  save(id, { title = argv[#argv], body = "", version = 1 })
+  io.stdout:write(id .. "\n")
+else
+  fail(2, "the fake does not know " .. tostring(verb))
+end
