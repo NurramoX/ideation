@@ -22,7 +22,8 @@ type input struct {
 
 // parse splits args into positionals and v's flags. Flags may appear
 // anywhere; `--` ends them. A value flag takes the next argument, or
-// `--name=value`. -h and --help are accepted by every verb.
+// `--name=value`. -h and --help are accepted by every verb. For a verb that
+// takes a Filter, an unknown `-word` is a Filter word.
 func parse(v *verb, args []string) (*input, error) {
 	in := &input{vals: map[string][]string{}}
 	for i := 0; i < len(args); i++ {
@@ -45,6 +46,9 @@ func parse(v *verb, args []string) (*input, error) {
 		}
 		f := v.flag(name)
 		switch {
+		case f == nil && v.filter && !strings.HasPrefix(s, "--"):
+			in.args = append(in.args, s)
+			continue
 		case f == nil:
 			return nil, fmt.Errorf("unknown flag %s", name)
 		case f.arg == "" && hasVal:

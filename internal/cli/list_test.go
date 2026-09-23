@@ -43,6 +43,18 @@ func TestLsFilterAndParams(t *testing.T) {
 	}
 }
 
+func TestLsTakesNegatedTermsBare(t *testing.T) {
+	e := newEnv(t)
+	n := len(e.api.requests())
+	run("", "ls", "status:raw,active", "-reviewed:90d..", "-q").expect(t, 0, "", "")
+	if got := e.api.requests(); got[n+1] != "GET /ideas?filter=status%3Araw%2Cactive+-reviewed%3A90d.." {
+		t.Errorf("request %q", got[n+1])
+	}
+	if r := run("", "ls", "--sotr", "title"); r.code != 2 {
+		t.Errorf("unknown long flag: got %+v", r)
+	}
+}
+
 func TestLsUsage(t *testing.T) {
 	e := newEnv(t)
 	for _, args := range [][]string{

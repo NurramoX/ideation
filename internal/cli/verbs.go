@@ -9,7 +9,10 @@ type verb struct {
 	example string // one agent-oriented example
 	flags   []flagSpec
 	hidden  bool // left out of help and completion
-	run     func(*app, *input) int
+	// filter: the positionals are Filter words, so an unknown single-dash
+	// argument such as `-has:effort` is a negated term, not a flag.
+	filter bool
+	run    func(*app, *input) int
 }
 
 func (v *verb) flag(name string) *flagSpec {
@@ -63,10 +66,12 @@ func init() {
 		},
 		{
 			name:    "ls",
+			filter:  true,
 			usage:   "ls [<filter words>...] [--sort updated|created|reviewed|title|rank] [--asc|--desc] [--limit <n>] [--offset <n>] [-q|--json]",
 			summary: "list ideas matching a Filter",
-			about: "Lists the ideas matching the Filter, the words joined by spaces; put `--`\n" +
-				"before a Filter that starts with `-`. Filters: text words, tag:rust,\n" +
+			about: "Lists the ideas matching the Filter, the words joined by spaces. A word\n" +
+				"like -has:effort is a negated term; put `--` before one that is also a\n" +
+				"flag (-q, -h). Filters: text words, tag:rust,\n" +
 				"status:raw,active, key:value, has:key, created:2026-09, reviewed:..90d,\n" +
 				"`or`, -negation and (grouping). The default order is rank for text,\n" +
 				"otherwise updated, newest first.",
@@ -194,6 +199,7 @@ func init() {
 		},
 		{
 			name:    "review",
+			filter:  true,
 			usage:   "review [<filter words>...]",
 			summary: "walk ideas in the Review TUI (bare `idea` does this)",
 			about: "Opens the Review TUI on the Filter, or on the Review queue\n" +
