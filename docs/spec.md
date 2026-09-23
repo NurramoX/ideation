@@ -136,8 +136,9 @@ STRING := "..." with "" for a literal quote
 ```
 
 **Syntax rules.**
-- Keys match lowercased.
-- A value or text term needs quotes when it contains whitespace, `(`, `)`, `:`, `,` or `"`, starts with `-`, or is the word `or`.
+- Keys, and `tag:` and `has:` values, match lowercased: ASCII letters only, as labels are lowercased.
+- A word right before `:` is a key, even `or`: `or:x` tests the attribute `or`.
+- A value or text term needs quotes when it contains whitespace, `(`, `)`, `:`, `,` or `"`, starts with `-`, or is the word `or` in any case; an unquoted value that starts with `-` or is `or` is a parse error.
 - There are no `<`/`>` operators, no wildcards, no prefix match and no ordering on attribute values.
 
 | Key | Example | Meaning |
@@ -158,6 +159,7 @@ STRING := "..." with "" for a literal quote
 **Dates.**
 - A **period** is `2026`, `2026-09`, `2026-09-01`, `today` or a full RFC 3339 instant; `created:2026-09` means during September.
 - A **range** is `a..b`, `a..` or `..b`, both ends inclusive. An end is a period or a **relative instant**, `90d`, `2w`, `6m` or `1y`, meaning that long before now.
+- `today` and the relative units are lowercase only; `90D` or `Today` is a parse error.
 - A lone relative instant (`created:7d`) is a parse error that points at the range spelling.
 - Periods are read in the machine's local time zone.
 - A null `reviewed` satisfies no date term, so "never reviewed" is `-has:reviewed`, and the **Review queue** is `status:raw,active -reviewed:90d..`.

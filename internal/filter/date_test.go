@@ -2,6 +2,7 @@ package filter
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -31,7 +32,7 @@ func TestParseDates(t *testing.T) {
 		{"updated:2026-10-25", Updated, day(2026, 10, 25), day(2026, 10, 26)}, // 25-hour day
 		{"updated:2026-03-29", Updated, day(2026, 3, 29), day(2026, 3, 30)},   // 23-hour day
 		{"reviewed:today", Reviewed, day(2026, 9, 23), day(2026, 9, 24)},
-		{"Reviewed:Today", Reviewed, day(2026, 9, 23), day(2026, 9, 24)},
+		{"Reviewed:today", Reviewed, day(2026, 9, 23), day(2026, 9, 24)}, // keys match lowercased
 		{`created:"2026-09-01T10:00:00Z"`, Created, utc(2026, 9, 1, 10, 0, 0, 0), utc(2026, 9, 1, 10, 0, 0, 1)},
 		{`created:"2026-09-01T10:00:00.4129+02:00"`, Created, at(2026, 9, 1, 10, 0, 0, 412), at(2026, 9, 1, 10, 0, 0, 413)},
 
@@ -50,7 +51,6 @@ func TestParseDates(t *testing.T) {
 		{"reviewed:6m..", Reviewed, at(2026, 3, 23, 15, 4, 5, 0), inf}, // across DST: wall clock kept
 		{"reviewed:1y..", Reviewed, at(2025, 9, 23, 15, 4, 5, 0), inf},
 		{"reviewed:0d..", Reviewed, now, inf},
-		{"reviewed:90D..", Reviewed, at(2026, 6, 25, 15, 4, 5, 0), inf},
 		{"created:90d..30d", Created, at(2026, 6, 25, 15, 4, 5, 0), at(2026, 8, 24, 15, 4, 5, 1)},
 		{"created:2026..7d", Created, day(2026, 1, 1), at(2026, 9, 16, 15, 4, 5, 1)},
 	}
@@ -67,6 +67,38 @@ func TestParseDates(t *testing.T) {
 			if d.Field != tt.field || !d.From.Equal(tt.from) || !d.To.Equal(tt.to) {
 				t.Errorf("Parse(%q) = %v [%v, %v), want %v [%v, %v)",
 					tt.src, d.Field, d.From, d.To, tt.field, tt.from, tt.to)
+			}
+		})
+	}
+}
+
+// Date words are lowercase only.
+func TestParseDateWordCase(t *testing.T) {
+	tests := []struct {
+		src     string
+		pos     int
+		msgPart string
+	}{
+		{"reviewed:Today", 10, "write today"},
+		{"created:TODAY..", 9, "write today"},
+		{"reviewed:90D..", 10, "write 90d"},
+		{"reviewed:..2W", 12, "write 2w"},
+		{"created:2026..6M", 15, "write 6m"},
+		{"created:1Y..today", 9, "write 1y"},
+		{"created:7D", 9, "write 7d"},
+		{`created:"TODAY"`, 9, "write today"},
+		{"created:2026,90D..", 14, "write 90d"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.src, func(t *testing.T) {
+			e, err := Parse(tt.src, now)
+			if err == nil {
+				t.Fatalf("Parse(%q) = %#v, want an error", tt.src, e)
+			}
+			pe := err.(*Error)
+			if pe.Position != tt.pos || !strings.Contains(pe.Msg, tt.msgPart) {
+				t.Errorf("Parse(%q) = error at %d %q, want at %d containing %q",
+					tt.src, pe.Position, pe.Msg, tt.pos, tt.msgPart)
 			}
 		})
 	}
