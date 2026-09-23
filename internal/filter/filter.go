@@ -4,7 +4,7 @@
 package filter
 
 import (
-	"errors"
+	"strings"
 	"time"
 )
 
@@ -94,29 +94,28 @@ type Error struct {
 
 func (e *Error) Error() string { return e.Msg }
 
-// Parse parses src. Periods are read in now's location, and relative
-// instants count back from now. The empty (or all-whitespace) filter parses
-// to nil. Every error is an *Error.
-func Parse(src string, now time.Time) (Expr, error) {
-	return nil, errors.New("filter.Parse: not implemented")
-}
-
-// Ranked returns the text terms that are top-level AND terms of e: the ones
-// that are ranked and snippeted. It returns nil when there are none.
-func Ranked(e Expr) []Text {
-	return nil
-}
-
-// Vocabulary returns the tags and attribute keys that e mentions, each
-// sorted and deduplicated, for the vocabulary hint. Keys include those of
-// Has terms except "tag", "reviewed", "created" and "updated"; "status" is
-// never returned.
-func Vocabulary(e Expr) (tags, keys []string) {
-	return nil, nil
-}
-
 // Caret renders src with a caret under the 1-based rune position pos, as two
-// lines without a trailing newline, for showing a parse error.
+// lines without a trailing newline, for showing a parse error. The caret
+// line keeps src's tabs so the caret stays aligned.
 func Caret(src string, pos int) string {
-	return src
+	var b strings.Builder
+	b.WriteString(src)
+	b.WriteByte('\n')
+	i := 1
+	for _, r := range src {
+		if i >= pos {
+			break
+		}
+		if r == '\t' {
+			b.WriteByte('\t')
+		} else {
+			b.WriteByte(' ')
+		}
+		i++
+	}
+	for ; i < pos; i++ { // pos past the end
+		b.WriteByte(' ')
+	}
+	b.WriteByte('^')
+	return b.String()
 }

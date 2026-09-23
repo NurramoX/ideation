@@ -3,15 +3,10 @@ package tui
 
 import (
 	"context"
-	"errors"
+
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/NurramoX/ideation/internal/client"
-
-	_ "charm.land/bubbles/v2/textinput"
-	_ "charm.land/bubbles/v2/viewport"
-	_ "charm.land/bubbletea/v2"
-	_ "charm.land/glamour/v2"
-	_ "charm.land/lipgloss/v2"
 )
 
 // DefaultFilter is the Review queue, prefilled when no Filter is given.
@@ -22,5 +17,8 @@ const DefaultFilter = "status:raw,active -reviewed:90d.."
 // the user's text from every editor round-trip aborted after a 412, which the
 // caller prints to stdout.
 func Run(ctx context.Context, c client.Client, filter string) (aborted [][]byte, err error) {
-	return nil, errors.New("tui.Run: not implemented")
+	m := newModel(ctx, c, filter)
+	_, err = tea.NewProgram(m, tea.WithContext(ctx)).Run()
+	m.abortEdit()
+	return m.aborted, err
 }
