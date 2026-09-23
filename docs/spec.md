@@ -193,7 +193,7 @@ Decided in [HTTP API surface](https://github.com/NurramoX/ideation/issues/7), wi
 - An absent `filter` means all ideas.
 
 **Version.**
-- Every response exposes the Version as `ETag` and as `version`, and every successful write returns the new `ETag`.
+- Every response about one idea exposes its Version as `ETag` and as `version`, and every successful write returns the new `ETag`. Lists, the vocabulary and `GET /` carry no single Version and send no `ETag`.
 - `If-Match` is **required** on `PATCH`, `PUT /body` and `DELETE /ideas/{id}`:
   - missing → `428`
   - stale → `412` with `current_version`
@@ -226,7 +226,7 @@ Decided in [Daemon lifecycle and local HTTP exposure](https://github.com/Nurramo
 - `IDEATION_HOME`, read the same way by daemon and CLI, replaces the root for tests and dev builds.
 - The launchd job never sets `IDEATION_HOME`.
 
-**Socket.** `<home>/ideation.sock`, `chmod`ed to `0600` after bind. There is never a TCP listener, and there is no token or peer check. The daemon refuses to start if the socket path exceeds 104 bytes.
+**Socket.** `<home>/ideation.sock`, `chmod`ed to `0600` after bind. There is never a TCP listener, and there is no token or peer check. The daemon refuses to start if the socket path exceeds 103 bytes: macOS's `sun_path` holds 104 including the terminating NUL.
 
 **Single instance.** The first act of `idea daemon` is `flock(LOCK_EX|LOCK_NB)` on `daemon.lock`, held for the life of the process.
 - If another process holds the lock, the daemon exits non-zero with "already running" and touches nothing.
@@ -419,7 +419,7 @@ Decided in [Review TUI](https://github.com/NurramoX/ideation/issues/8). It is te
 
 **Conflicts.**
 - A `412` on delete shows "changed, not deleted" and refreshes the preview.
-- A `412` after the editor offers `[o]verwrite / [r]e-edit / [a]bort`. **Abort** prints the user's text to stdout after the TUI exits and the terminal is restored.
+- A `412` after the editor offers `[o]verwrite / [r]e-edit / [a]bort`. **Re-edit** shows the other party's current body in the preview rather than on stderr, which the TUI hides, and reopens the user's text on `enter`. **Abort** prints the user's text to stdout after the TUI exits and the terminal is restored.
 
 ## 9. Agent skill
 

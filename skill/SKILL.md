@@ -30,7 +30,7 @@ Capture only when the user asks for it; the request is the trigger. Never captur
 
 ## Editing
 
-1. **Find the idea:** `idea ls <filter> --json`. With one clear match, proceed and name the idea you touch. With several, list them and let the user pick.
+1. **Find the idea:** `idea ls <filter> --json`. With one clear match, proceed and name the idea you touch. With several, list them and ask which one. Never guess.
 2. **Change it:**
    - A local change: `idea replace`.
    - A restructure: `idea show --json <id>`, rewrite the body, then `idea write <id> --version <n>` with the `version` from that show.
