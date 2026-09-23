@@ -5,8 +5,10 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/NurramoX/ideation/internal/api"
@@ -34,7 +36,9 @@ func (e *StaleError) Error() string {
 	return fmt.Sprintf("stale version, current is %d", e.Current)
 }
 
-// Sort fields.
+// Sort fields. Desc puts the newest first for the timestamps, and the best
+// match first for rank. Title compares ASCII case-insensitively. Ties break on
+// id, in the same direction.
 const (
 	SortUpdated  = "updated"
 	SortCreated  = "created"
@@ -71,6 +75,8 @@ type Store interface {
 	DeleteAttribute(ctx context.Context, id int64, pre api.Precondition, key string) (version int64, err error)
 	MarkReviewed(ctx context.Context, id int64) error
 	Delete(ctx context.Context, id int64, pre api.Precondition) error
+	// Tags, Attributes and AttributeValues return the vocabulary in use,
+	// sorted by tag, key or value.
 	Tags(ctx context.Context) ([]api.TagCount, error)
 	Attributes(ctx context.Context) ([]api.KeyCount, error)
 	AttributeValues(ctx context.Context, key string) ([]api.ValueCount, error)
@@ -81,5 +87,34 @@ type Store interface {
 // Open opens (creating if needed) the database at path and runs the
 // migrations. now is the clock for every timestamp the store sets.
 func Open(path string, now func() time.Time) (Store, error) {
-	return nil, errors.New("store.Open: not implemented")
+	// The driver reads everything after the first '?' as parameters.
+	if path == "" || strings.ContainsRune(path, '?') {
+		return nil, fmt.Errorf("unusable database path %q", path)
+	}
+	db, err := sql.Open("sqlite", path+"?"+pragmas)
+	if err != nil {
+		return nil, err
+	}
+	// One connection: every statement serialises, and the pragmas, set per
+	// connection by the driver, always hold.
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
+	db.SetConnMaxLifetime(0)
+	db.SetConnMaxIdleTime(0)
+
+	scripts, err := migrations()
+	if err == nil {
+		err = migrate(context.Background(), db, scripts)
+	}
+	if err != nil {
+		db.Close()
+		return nil, err
+	}
+	return &sqliteStore{db: db, now: now}, nil
 }
+
+// pragmas are applied by the driver to every connection it opens.
+const pragmas = "_pragma=busy_timeout(5000)" +
+	"&_pragma=journal_mode(WAL)" +
+	"&_pragma=foreign_keys(1)" +
+	"&_pragma=synchronous(FULL)"
