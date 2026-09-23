@@ -173,7 +173,7 @@ func (p *parser) term() (Expr, error) {
 	}
 	w := p.word()
 	if !p.eof() && p.src[p.i] == ':' {
-		return p.keyTerm(strings.ToLower(w.s))
+		return p.keyTerm(api.LowerLabel(w.s))
 	}
 	return p.text(TextAny, w)
 }
@@ -207,7 +207,8 @@ func (p *parser) keyTerm(key string) (Expr, error) {
 	return newOr(terms), nil
 }
 
-// value reads the WORD or STRING after sep.
+// value reads the WORD or STRING after sep. A WORD can't start with '-' or
+// be the word or (in any case): such a value needs quotes.
 func (p *parser) value(sep rune) (token, error) {
 	if p.eof() || !isWordRune(p.src[p.i]) && p.src[p.i] != '"' {
 		return token{}, p.errorf(p.i, "expected a value after '%c'", sep)
@@ -215,7 +216,14 @@ func (p *parser) value(sep rune) (token, error) {
 	if p.src[p.i] == '"' {
 		return p.string()
 	}
-	return p.word(), nil
+	w := p.word()
+	if strings.HasPrefix(w.s, "-") {
+		return token{}, p.errorf(w.start, "a value that starts with '-' needs quotes; quote it: %q", w.s)
+	}
+	if strings.EqualFold(w.s, "or") {
+		return token{}, p.errorf(w.start, "the word or as a value needs quotes; quote it: %q", w.s)
+	}
+	return w, nil
 }
 
 // keyed makes the term for key:v.
@@ -225,11 +233,11 @@ func (p *parser) keyed(key string, v token) (Expr, error) {
 	}
 	switch key {
 	case "tag":
-		return Tag{strings.ToLower(v.s)}, nil
+		return Tag{api.LowerLabel(v.s)}, nil
 	case "id":
 		return p.id(v)
 	case "has":
-		k := strings.ToLower(v.s)
+		k := api.LowerLabel(v.s)
 		switch k {
 		case "id", "title", "body", "has":
 			return nil, p.errorf(v.start, "has:%s is not a presence test; use has:tag, has:reviewed or has:<attribute key>", k)

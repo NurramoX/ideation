@@ -16,6 +16,9 @@ const dateForms = "use 2026, 2026-09, 2026-09-01, today, a quoted RFC 3339 insta
 func (p *parser) date(key string, field DateField, v token) (Expr, error) {
 	i := strings.Index(v.s, "..")
 	if i < 0 {
+		if err := p.dateWordCase(v.s, v.start); err != nil {
+			return nil, err
+		}
 		if _, ok := p.relative(v.s); ok {
 			return nil, p.errorf(v.start,
 				"%s:%s needs a range: write %s:%s.. for since then, or %s:..%s for before then",
@@ -34,6 +37,9 @@ func (p *parser) date(key string, field DateField, v token) (Expr, error) {
 	}
 	d := Date{Field: field}
 	if a != "" {
+		if err := p.dateWordCase(a, v.pos[0]); err != nil {
+			return nil, err
+		}
 		from, _, ok := p.end(a)
 		if !ok {
 			return nil, p.errorf(v.pos[0], "%q is not a date; %s", a, dateForms)
@@ -41,14 +47,30 @@ func (p *parser) date(key string, field DateField, v token) (Expr, error) {
 		d.From = from
 	}
 	if b != "" {
+		bPos := v.pos[utf8.RuneCountInString(v.s[:i+len("..")])]
+		if err := p.dateWordCase(b, bPos); err != nil {
+			return nil, err
+		}
 		_, to, ok := p.end(b)
 		if !ok {
-			return nil, p.errorf(v.pos[utf8.RuneCountInString(v.s[:i+len("..")])],
-				"%q is not a date; %s", b, dateForms)
+			return nil, p.errorf(bPos, "%q is not a date; %s", b, dateForms)
 		}
 		d.To = to
 	}
 	return d, nil
+}
+
+// dateWordCase returns an error at source index i when s is a date word,
+// today or a relative instant, spelled other than lowercase.
+func (p *parser) dateWordCase(s string, i int) error {
+	lower := strings.ToLower(s)
+	if lower == s {
+		return nil
+	}
+	if _, ok := p.relative(lower); ok || lower == "today" {
+		return p.errorf(i, "%s is not a date; date words are lowercase: write %s", s, lower)
+	}
+	return nil
 }
 
 // end resolves one end of a range, or a whole period, to [from, to).
@@ -63,7 +85,7 @@ func (p *parser) end(s string) (from, to time.Time, ok bool) {
 // instant is the period of the millisecond it names.
 func (p *parser) period(s string) (from, to time.Time, ok bool) {
 	loc := p.now.Location()
-	if strings.EqualFold(s, "today") {
+	if s == "today" {
 		y, m, d := p.now.Date()
 		return time.Date(y, m, d, 0, 0, 0, 0, loc), time.Date(y, m, d+1, 0, 0, 0, 0, loc), true
 	}
@@ -110,7 +132,8 @@ func hasShape(s, shape string) bool {
 	return true
 }
 
-// relative resolves a relative instant (`90d`, `2w`, `6m`, `1y`): that long
+// relative resolves a relative instant (`90d`, `2w`, `6m`, `1y`, lowercase
+// only): that long
 // before now, counted in calendar units in now's location.
 func (p *parser) relative(s string) (time.Time, bool) {
 	if len(s) < 2 || len(s) > 6 { // at most five digits
@@ -122,13 +145,13 @@ func (p *parser) relative(s string) (time.Time, bool) {
 	}
 	n, _ := strconv.Atoi(digits)
 	switch s[len(s)-1] {
-	case 'd', 'D':
+	case 'd':
 		return p.now.AddDate(0, 0, -n), true
-	case 'w', 'W':
+	case 'w':
 		return p.now.AddDate(0, 0, -7*n), true
-	case 'm', 'M':
+	case 'm':
 		return p.now.AddDate(0, -n, 0), true
-	case 'y', 'Y':
+	case 'y':
 		return p.now.AddDate(-n, 0, 0), true
 	}
 	return time.Time{}, false

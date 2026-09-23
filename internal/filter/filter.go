@@ -40,22 +40,22 @@ type Text struct {
 }
 
 // Attr matches an attribute, status included, whose value equals Value under
-// Unicode simple case folding. Key is lowercased.
+// Unicode simple case folding. Key is lowercased by api.LowerLabel.
 type Attr struct {
 	Key   string
 	Value string
 }
 
-// Tag matches an idea carrying the tag. Tag is lowercased.
+// Tag matches an idea carrying the tag. Tag is lowercased by api.LowerLabel.
 type Tag struct{ Tag string }
 
 // ID matches the idea with this id.
 type ID struct{ ID int64 }
 
-// Has tests presence. Key is lowercased and is one of "tag" (any tag),
-// "reviewed" (reviewed at least once), "created" or "updated" (always true),
-// or an attribute key. has:id, has:title, has:body and has:has are parse
-// errors.
+// Has tests presence. Key is lowercased by api.LowerLabel and is one of
+// "tag" (any tag), "reviewed" (reviewed at least once), "created" or
+// "updated" (always true), or an attribute key. has:id, has:title, has:body
+// and has:has are parse errors.
 type Has struct{ Key string }
 
 // DateField is the timestamp a date term tests.
