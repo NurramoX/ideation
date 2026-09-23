@@ -25,15 +25,16 @@ func fail(w http.ResponseWriter, status int, detail string) {
 	writeProblem(w, api.Problem{Status: status, Detail: detail})
 }
 
-// storeError maps a store error to its problem: ErrNotFound 404,
+// storeError maps a store error to its problem: ErrNotFound 404 naming the
+// id, so a batch of several ids tells which one is missing,
 // *InvalidError 422, ErrTooLarge 413, *StaleError 412 carrying the current
 // Version (also sent as ETag), anything else 500.
-func storeError(w http.ResponseWriter, err error) {
+func storeError(w http.ResponseWriter, r *http.Request, err error) {
 	var invalid *store.InvalidError
 	var stale *store.StaleError
 	switch {
 	case errors.Is(err, store.ErrNotFound):
-		fail(w, http.StatusNotFound, err.Error())
+		fail(w, http.StatusNotFound, "idea "+r.PathValue("id")+" not found")
 	case errors.Is(err, store.ErrTooLarge):
 		fail(w, http.StatusRequestEntityTooLarge, err.Error())
 	case errors.As(err, &invalid):

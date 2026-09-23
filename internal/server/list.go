@@ -32,7 +32,7 @@ func (h *handler) list(w http.ResponseWriter, r *http.Request) {
 	}
 	l, err := h.store.List(r.Context(), q)
 	if err != nil {
-		storeError(w, err)
+		storeError(w, r, err)
 		return
 	}
 	if l.Ideas == nil {

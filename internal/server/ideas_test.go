@@ -78,7 +78,9 @@ func TestGetIdea(t *testing.T) {
 
 func TestGetIdeaErrors(t *testing.T) {
 	ts, _ := newTestServer(t)
-	wantProblem(t, do(t, ts, "GET", "/ideas/7", ""), http.StatusNotFound)
+	if p := wantProblem(t, do(t, ts, "GET", "/ideas/7", ""), http.StatusNotFound); p.Detail != "idea 7 not found" {
+		t.Errorf("detail %q, want it to name the id", p.Detail)
+	}
 	for _, id := range []string{"abc", "0", "-1", "+1", "1.0", "99999999999999999999"} {
 		wantProblem(t, do(t, ts, "GET", "/ideas/"+id, ""), http.StatusBadRequest)
 	}

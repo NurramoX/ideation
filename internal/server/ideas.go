@@ -29,7 +29,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		Title: *req.Title, Body: req.Body, Tags: req.Tags, Attributes: req.Attributes,
 	})
 	if err != nil {
-		storeError(w, err)
+		storeError(w, r, err)
 		return
 	}
 	w.Header().Set("Location", "/ideas/"+strconv.FormatInt(idea.ID, 10))
@@ -96,7 +96,7 @@ func (h *handler) patch(w http.ResponseWriter, r *http.Request) {
 	}
 	idea, err := h.store.Patch(r.Context(), id, pre, p)
 	if err != nil {
-		storeError(w, err)
+		storeError(w, r, err)
 		return
 	}
 	out := api.PatchedIdea{Meta: idea.Meta}
@@ -117,7 +117,7 @@ func (h *handler) delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.store.Delete(r.Context(), id, pre); err != nil {
-		storeError(w, err)
+		storeError(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -130,7 +130,7 @@ func (h *handler) get(w http.ResponseWriter, r *http.Request) {
 	}
 	idea, err := h.store.Get(r.Context(), id)
 	if err != nil {
-		storeError(w, err)
+		storeError(w, r, err)
 		return
 	}
 	if notModified(w, r, idea.Version) {

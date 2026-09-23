@@ -20,7 +20,7 @@ func (h *handler) getBody(w http.ResponseWriter, r *http.Request) {
 	}
 	idea, err := h.store.Get(r.Context(), id)
 	if err != nil {
-		storeError(w, err)
+		storeError(w, r, err)
 		return
 	}
 	if notModified(w, r, idea.Version) {
@@ -52,7 +52,7 @@ func (h *handler) putBody(w http.ResponseWriter, r *http.Request) {
 	}
 	version, err := h.store.PutBody(r.Context(), id, pre, body)
 	if err != nil {
-		storeError(w, err)
+		storeError(w, r, err)
 		return
 	}
 	setVersion(w, version)
