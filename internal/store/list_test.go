@@ -259,6 +259,17 @@ func TestSorts(t *testing.T) {
 	}
 }
 
+func TestTitleSortFoldsCaseBeyondASCII(t *testing.T) {
+	s, _ := open(t)
+	for _, title := range []string{"Σb", "σa", "b", "A"} {
+		create(t, s, api.CreateRequest{Title: title})
+	}
+	// σa before Σb: SQLite's NOCASE, ASCII-only, would put Σb first.
+	if got := idsOf(list(t, s, Query{Sort: SortTitle})); !reflect.DeepEqual(got, []int64{4, 3, 2, 1}) {
+		t.Errorf("asc: %v, want A, b, σa, Σb", got)
+	}
+}
+
 func TestTiesBreakOnID(t *testing.T) {
 	s, _ := open(t) // the clock stands still: every timestamp ties
 	for range 4 {

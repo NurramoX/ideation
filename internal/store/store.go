@@ -37,8 +37,8 @@ func (e *StaleError) Error() string {
 }
 
 // Sort fields. Desc puts the newest first for the timestamps, and the best
-// match first for rank. Title compares ASCII case-insensitively. Ties break on
-// id, in the same direction.
+// match first for rank. Title compares under Unicode simple case folding. Ties
+// break on id, in the same direction.
 const (
 	SortUpdated  = "updated"
 	SortCreated  = "created"

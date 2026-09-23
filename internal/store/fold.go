@@ -3,7 +3,19 @@ package store
 import (
 	"strings"
 	"unicode"
+
+	"modernc.org/sqlite"
 )
+
+// foldCollation orders text by its fold, so sorting ignores case beyond
+// ASCII, which SQLite's NOCASE does not.
+const foldCollation = "fold"
+
+func init() {
+	sqlite.MustRegisterCollationUtf8(foldCollation, func(a, b string) int {
+		return strings.Compare(fold(a), fold(b))
+	})
+}
 
 // fold maps s under Unicode simple case folding (one rune to one rune), so
 // that two strings are equal after fold exactly when strings.EqualFold says

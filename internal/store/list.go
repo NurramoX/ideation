@@ -83,7 +83,7 @@ func orderBy(sort string, desc, ranked bool) (string, error) {
 		}
 		return "i.reviewed_at ASC NULLS FIRST" + tie, nil
 	case SortTitle:
-		return "i.title COLLATE NOCASE " + dir + tie, nil
+		return "i.title COLLATE " + foldCollation + " " + dir + tie, nil
 	case SortRank:
 		if !ranked {
 			return "", fmt.Errorf("sort by rank needs a ranked text term")
