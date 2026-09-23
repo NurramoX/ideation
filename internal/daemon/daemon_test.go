@@ -135,12 +135,25 @@ func TestSecondInstanceTouchesNothing(t *testing.T) {
 	}
 }
 
-func TestRefusesSocketPathOver104Bytes(t *testing.T) {
+// homeWithSocketPath is a home under a short parent whose socket path is
+// exactly n bytes long.
+func homeWithSocketPath(t *testing.T, n int) home.Home {
+	t.Helper()
 	parent := shortHome(t).Dir
-	h := home.Home{Dir: filepath.Join(parent, strings.Repeat("d", 104))}
+	pad := n - len(parent) - len("/") - len("/ideation.sock")
+	h := home.Home{Dir: filepath.Join(parent, strings.Repeat("d", pad))}
+	if len(h.Socket()) != n {
+		t.Fatalf("socket path is %d bytes, want %d", len(h.Socket()), n)
+	}
+	return h
+}
 
+// macOS's sun_path holds 104 bytes including the terminating NUL, so 103 is
+// the longest path that binds.
+func TestRefusesASocketPathOf104Bytes(t *testing.T) {
+	h := homeWithSocketPath(t, 104)
 	err := Run(t.Context(), h, io.Discard)
-	if err == nil || !strings.Contains(err.Error(), "104") {
+	if err == nil || !strings.Contains(err.Error(), "103") {
 		t.Fatalf("Run = %v, want a socket path error", err)
 	}
 	if exists(h.Dir) {
@@ -149,6 +162,14 @@ func TestRefusesSocketPathOver104Bytes(t *testing.T) {
 }
 
 // The tests below need the real store.Open.
+
+func TestServesOnASocketPathOf103Bytes(t *testing.T) {
+	h := homeWithSocketPath(t, 103)
+	start(t, h)
+	if !exists(h.Socket()) {
+		t.Fatal("no socket")
+	}
+}
 
 func TestServesWithPrivateModes(t *testing.T) {
 	h := shortHome(t)

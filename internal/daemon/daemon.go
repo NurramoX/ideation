@@ -23,9 +23,9 @@ import (
 // ErrAlreadyRunning: another process holds daemon.lock.
 var ErrAlreadyRunning = errors.New("already running")
 
-// maxSocketPath is the longest socket path the daemon accepts: the size of
-// sun_path on macOS.
-const maxSocketPath = 104
+// maxSocketPath is the longest socket path that binds on macOS: sun_path
+// holds 104 bytes including the terminating NUL.
+const maxSocketPath = 103
 
 // drainTimeout is how long shutdown waits for in-flight requests before
 // closing their connections.
@@ -46,7 +46,7 @@ func Run(ctx context.Context, h home.Home, log io.Writer) error {
 	logger := newLogger(log)
 	sock := h.Socket()
 	if len(sock) > maxSocketPath {
-		return fmt.Errorf("socket path %s is %d bytes, over the %d macOS allows", sock, len(sock), maxSocketPath)
+		return fmt.Errorf("socket path %s is %d bytes, over the %d that bind on macOS", sock, len(sock), maxSocketPath)
 	}
 	if err := os.MkdirAll(h.Dir, 0o700); err != nil {
 		return err
