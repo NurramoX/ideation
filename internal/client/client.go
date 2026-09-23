@@ -62,9 +62,3 @@ type Client interface {
 	Attributes(ctx context.Context) ([]api.KeyCount, error)
 	AttributeValues(ctx context.Context, key string) ([]api.ValueCount, error)
 }
-
-// New returns a Client that dials the Unix socket at sock. It does not dial
-// until the first call.
-func New(sock string) Client {
-	return nil
-}
