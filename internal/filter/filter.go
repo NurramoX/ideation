@@ -6,6 +6,8 @@ package filter
 import (
 	"strings"
 	"time"
+
+	"github.com/mattn/go-runewidth"
 )
 
 // Expr is a node of the syntax tree. A nil Expr is the empty filter, which
@@ -96,7 +98,8 @@ func (e *Error) Error() string { return e.Msg }
 
 // Caret renders src with a caret under the 1-based rune position pos, as two
 // lines without a trailing newline, for showing a parse error. The caret
-// line keeps src's tabs so the caret stays aligned.
+// line keeps src's tabs and the terminal width of wide characters, so the
+// caret stays aligned.
 func Caret(src string, pos int) string {
 	var b strings.Builder
 	b.WriteString(src)
@@ -109,7 +112,7 @@ func Caret(src string, pos int) string {
 		if r == '\t' {
 			b.WriteByte('\t')
 		} else {
-			b.WriteByte(' ')
+			b.WriteString(strings.Repeat(" ", runewidth.RuneWidth(r)))
 		}
 		i++
 	}

@@ -80,7 +80,8 @@ func TestCaret(t *testing.T) {
 		{"(a b", 1, "(a b\n^"},
 		{"a)", 2, "a)\n ^"},
 		{"tag:", 5, "tag:\n    ^"}, // one past the end
-		{"日本語 )", 5, "日本語 )\n    ^"},
+		{"日本語 )", 5, "日本語 )\n       ^"}, // wide characters take two columns
+		{"café )", 6, "café )\n     ^"},
 		{"a\tb)", 4, "a\tb)\n \t ^"},
 	}
 	for _, tt := range tests {
