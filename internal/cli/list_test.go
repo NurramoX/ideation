@@ -36,9 +36,10 @@ func TestLsFilterAndParams(t *testing.T) {
 	if got := reqs[len(reqs)-1]; got != "GET /ideas?filter=tag%3Ax&limit=2&offset=1&order=asc&sort=created" {
 		t.Errorf("request %q", got)
 	}
+	n := len(e.api.requests())
 	run("", "ls", "--", "-tag:x").expect(t, 0, "", "")
-	if got := e.api.requests(); got[len(got)-1] != "GET /ideas?filter=-tag%3Ax" {
-		t.Errorf("request %q", got[len(got)-1])
+	if got := e.api.requests(); got[n+1] != "GET /ideas?filter=-tag%3Ax" {
+		t.Errorf("request %q", got[n+1])
 	}
 }
 
