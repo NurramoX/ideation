@@ -10,9 +10,21 @@ end
 
 local function err(msg) vim.notify(msg, vim.log.levels.ERROR) end
 
+--- The message for the CLI's stderr: a problem+json document (what --json
+--- prints) reads as the CLI's human message; anything else passes through.
+--- stale(current_version) words a 412.
+local function describe(stderr, stale)
+  local ok, p = pcall(vim.json.decode, stderr)
+  if not ok or type(p) ~= "table" or type(p.title) ~= "string" then return stderr end
+  if p.status == 412 and stale and p.current_version then return stale(p.current_version) end
+  local detail = type(p.detail) == "string" and p.detail ~= "" and ": " .. p.detail or ""
+  return "idea: " .. p.title .. detail
+end
+
 --- Runs the CLI synchronously. Returns the completed result, or nil after
 --- reporting a failure (the CLI's stderr, or why it could not start).
-local function run(args, stdin)
+--- stale words a 412, as for describe.
+local function run(args, stdin, stale)
   local ok, res = pcall(function()
     return vim.system(vim.list_extend({ config.cmd }, args), { stdin = stdin, text = true }):wait()
   end)
@@ -22,7 +34,7 @@ local function run(args, stdin)
   end
   if res.code ~= 0 then
     local msg = vim.trim(res.stderr or "")
-    err(msg ~= "" and msg or ("idea " .. args[1] .. " exited " .. res.code))
+    err(msg ~= "" and describe(msg, stale) or ("idea " .. args[1] .. " exited " .. res.code))
     return nil
   end
   return res
@@ -69,7 +81,10 @@ function M.write(buf, target)
   end
   local body = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, true), "\n")
   if vim.bo[buf].eol then body = body .. "\n" end
-  local res = run({ "write", id, "--version", tostring(version), "--json" }, body)
+  local res = run({ "write", id, "--version", tostring(version), "--json" }, body, function(current)
+    return ("idea %s changed: you had version %d, it is now %d (:e! reloads it, dropping your changes)"):format(
+      id, version, current)
+  end)
   if not res then return end
   vim.b[buf].idea_version = vim.json.decode(res.stdout).version
   vim.bo[buf].modified = false

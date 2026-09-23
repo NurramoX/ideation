@@ -23,6 +23,13 @@ local function seed(id, idea)
   f:close()
 end
 
+--- Makes every later CLI call exit with code, printing stderr.
+local function failing(code, stderr)
+  local f = assert(io.open(state .. "/fail.json", "wb"))
+  f:write(vim.json.encode({ code = code, stderr = stderr }))
+  f:close()
+end
+
 local function stored(id)
   local f = assert(io.open(state .. "/" .. id .. ".json", "rb"))
   local idea = vim.json.decode(f:read("a"))
@@ -118,19 +125,57 @@ test("each write is guarded by the version the last write returned", function()
   eq("c\n", stored(1).body, "stored body")
 end)
 
-test("a failed write reports the CLI's stderr and leaves the buffer modified", function()
+test("a stale write says what changed, points at :e! and leaves the buffer modified", function()
   seed(1, { title = "t", body = "a\n", version = 4 })
   vim.cmd.edit("idea://1")
   seed(1, { title = "t", body = "theirs\n", version = 9 })
   vim.api.nvim_buf_set_lines(0, 0, -1, true, { "mine" })
   vim.cmd.write()
-  eq({ { msg = "idea: idea 1 changed: you had version 4, it is now 9", level = vim.log.levels.ERROR } }, notes, "notes")
+  eq({ {
+    msg = "idea 1 changed: you had version 4, it is now 9 (:e! reloads it, dropping your changes)",
+    level = vim.log.levels.ERROR,
+  } }, notes, "notes")
   eq(true, vim.bo.modified, "modified")
   eq(4, vim.b.idea_version, "b:idea_version")
   eq("theirs\n", stored(1).body, "stored body")
   for _, call in ipairs(calls()) do
     eq(nil, vim.tbl_contains(call.argv, "--force") or nil, "--force in " .. vim.inspect(call.argv))
   end
+end)
+
+test("a rejected write reports the problem's title and detail", function()
+  seed(1, { title = "t", body = "a\n", version = 1 })
+  vim.cmd.edit("idea://1")
+  vim.api.nvim_buf_set_lines(0, 0, -1, true, { "mine" })
+  failing(5, '{"title":"Unprocessable Entity","status":422,"detail":"request body is not valid UTF-8"}')
+  vim.cmd.write()
+  eq({ { msg = "idea: Unprocessable Entity: request body is not valid UTF-8", level = vim.log.levels.ERROR } },
+    notes, "notes")
+  eq(true, vim.bo.modified, "modified")
+end)
+
+test("a problem without a detail reports just its title", function()
+  seed(1, { title = "t", body = "a\n", version = 1 })
+  vim.cmd.edit("idea://1")
+  vim.api.nvim_buf_set_lines(0, 0, -1, true, { "mine" })
+  failing(6, '{"title":"Internal Server Error","status":500,"detail":null}')
+  vim.cmd.write()
+  eq({ { msg = "idea: Internal Server Error", level = vim.log.levels.ERROR } }, notes, "notes")
+end)
+
+test("stderr that is not problem+json is reported trimmed and unchanged", function()
+  seed(1, { title = "t", body = "a\n", version = 1 })
+  vim.cmd.edit("idea://1")
+  vim.api.nvim_buf_set_lines(0, 0, -1, true, { "mine" })
+  failing(7, "idea: daemon unreachable: dial unix /run/idea.sock: connect: no such file or directory\n"
+    .. "  start it with: idead\n")
+  vim.cmd.write()
+  eq({ {
+    msg = "idea: daemon unreachable: dial unix /run/idea.sock: connect: no such file or directory\n"
+      .. "  start it with: idead",
+    level = vim.log.levels.ERROR,
+  } }, notes, "notes")
+  eq(true, vim.bo.modified, "modified")
 end)
 
 test(":e! reloads the idea and discards local changes", function()
@@ -157,9 +202,9 @@ test("a non-decimal id is an error and never reaches the CLI", function()
   eq({}, calls(), "calls")
 end)
 
-test("an unknown id reports the CLI's stderr", function()
+test("an unknown id reports the problem as the CLI would to a human", function()
   vim.cmd.edit("idea://42")
-  eq({ { msg = "idea: idea 42: not found", level = vim.log.levels.ERROR } }, notes, "notes")
+  eq({ { msg = "idea: Not Found: idea 42 not found", level = vim.log.levels.ERROR } }, notes, "notes")
 end)
 
 test("another buffer cannot be written to an idea", function()
