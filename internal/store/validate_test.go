@@ -2,6 +2,7 @@ package store
 
 import (
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -45,7 +46,14 @@ func TestCreateRejectsInvalidContent(t *testing.T) {
 		"empty value":             {Title: "t", Attributes: map[string]string{"k": ""}},
 		"blank value":             {Title: "t", Attributes: map[string]string{"k": "  "}},
 		"value over 2000 bytes":   {Title: "t", Attributes: map[string]string{"k": strings.Repeat("a", 2001)}},
-		"multi-line value":        {Title: "t", Attributes: map[string]string{"k": "a\nb"}},
+		"tab-only value":          {Title: "t", Attributes: map[string]string{"k": "\t \t"}},
+		"value with an LF":        {Title: "t", Attributes: map[string]string{"k": "a\nb"}},
+		"value with a CR":         {Title: "t", Attributes: map[string]string{"k": "a\rb"}},
+		"value with a VT":         {Title: "t", Attributes: map[string]string{"k": "a\vb"}},
+		"value with an FF":        {Title: "t", Attributes: map[string]string{"k": "a\fb"}},
+		"value with a NEL":        {Title: "t", Attributes: map[string]string{"k": "a\u0085b"}},
+		"value with an LS":        {Title: "t", Attributes: map[string]string{"k": "a\u2028b"}},
+		"value with a PS":         {Title: "t", Attributes: map[string]string{"k": "a\u2029b"}},
 		"value not UTF-8":         {Title: "t", Attributes: map[string]string{"k": "\xff"}},
 		"unknown status":          {Title: "t", Attributes: map[string]string{"status": "maybe"}},
 		"key given twice":         {Title: "t", Attributes: map[string]string{"k": "a", "K": "b"}},
@@ -63,6 +71,21 @@ func TestCreateRejectsInvalidContent(t *testing.T) {
 			_, err := s.Create(ctx, api.CreateRequest{Title: "t", Attributes: map[string]string{strings.ToUpper(k): "v"}})
 			wantInvalid(t, err)
 		})
+	}
+}
+
+func TestValuesMayHoldTabsAndOtherNonBreakingCharacters(t *testing.T) {
+	s, _ := open(t)
+	idea := create(t, s, api.CreateRequest{Title: "t", Attributes: map[string]string{
+		"cols":  "\ta\tb\t",
+		"bell":  "ring\a",
+		"esc":   "\x1b[1m",
+		"nbsp":  "a\u00a0b",
+		"state": "wip",
+	}})
+	want := map[string]string{"cols": "a\tb", "bell": "ring\a", "esc": "\x1b[1m", "nbsp": "a\u00a0b", "state": "wip", "status": "raw"}
+	if !reflect.DeepEqual(idea.Attributes, want) {
+		t.Errorf("Attributes = %q, want %q", idea.Attributes, want)
 	}
 }
 

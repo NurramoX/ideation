@@ -48,7 +48,7 @@ An **idea** carries: `id`, `title`, `body`, a set of `tags`, a set of `attribute
 | `title` | Separate from the body; the server never parses the body for it. 1–400 characters after trimming, single line, no control characters, not unique. |
 | `body` | Markdown, stored byte-exact, valid UTF-8, at most 10 MB (`413` over). May be empty, stored as `""`, never null. No frontmatter. |
 | tag | A bare label, its own concept rather than an attribute. `[a-z0-9][a-z0-9_-]*` with input lowercased, at most 128 bytes, at most 128 per idea. Returned sorted. |
-| attribute | `key → value`, exactly one value per key. The key follows the tag rules. The value is single-line UTF-8, 1–2000 bytes, trimmed, case preserved; an empty value is rejected (remove the key instead). At most 128 per idea. Returned sorted by key. |
+| attribute | `key → value`, exactly one value per key. The key follows the tag rules. The value is single-line UTF-8 (no LF, CR, VT, FF, NEL, U+2028 or U+2029; tabs are fine), 1–2000 bytes, trimmed, case preserved; an empty value is rejected (remove the key instead). At most 128 per idea. Returned sorted by key. |
 | reserved keys | `id`, `title`, `body`, `tag`, `has`, `created`, `updated`, `reviewed` can never be attribute keys. |
 | `version` | An integer. It advances, together with `updated_at`, only on a real change; a no-op write moves neither. |
 | `created_at`, `updated_at`, `reviewed_at` | RFC 3339 UTC with millisecond precision (`2026-09-22T14:03:07.412Z`). `reviewed_at` is null until the first review. |

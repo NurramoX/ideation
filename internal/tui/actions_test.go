@@ -34,6 +34,19 @@ func TestRetagAppliesPerTagCallsAndStays(t *testing.T) {
 	}
 }
 
+func TestRetagLowercasesOnlyASCIILikeTheServer(t *testing.T) {
+	fc := threeIdeas()
+	h := newHarness(t, fc, "")
+	h.press("t", "ctrl+u") // idea 1: rust
+	h.typeText("Rust Élan")
+	h.press("enter")
+	// Rust is the tag it already has; Élan goes out as written, for the
+	// server to judge, rather than as a lowercased élan it never saw.
+	if want := []string{"PUT 1 tag Élan"}; !slices.Equal(fc.writes(), want) {
+		t.Errorf("writes = %v, want %v", fc.writes(), want)
+	}
+}
+
 func TestRetagEscCancels(t *testing.T) {
 	fc := threeIdeas()
 	h := newHarness(t, fc, "")
