@@ -15,7 +15,7 @@ import (
 var scripts embed.FS
 
 func runCompletion(a *app, in *input) int {
-	v := lookup("completion")
+	v := in.verb
 	if len(in.args) != 1 {
 		return a.usagef(v, "one shell is required")
 	}
@@ -30,7 +30,7 @@ func runCompletion(a *app, in *input) int {
 // runComplete prints the candidates of a kind that start with the prefix,
 // one per line. When the daemon is down it prints nothing and exits 0.
 func runComplete(a *app, in *input) int {
-	v := lookup("complete")
+	v := in.verb
 	args := in.args
 	if len(args) == 0 {
 		return a.usagef(v, "a kind is required")

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"path/filepath"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -104,5 +103,3 @@ func ts(s string) api.Time {
 	}
 	return api.Time{Time: t}
 }
-
-func join(ss []string) string { return strings.Join(ss, ",") }

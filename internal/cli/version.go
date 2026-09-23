@@ -10,7 +10,7 @@ import (
 
 func runPing(a *app, in *input) int {
 	if len(in.args) > 0 {
-		return a.usagef(lookup("ping"), "too many arguments")
+		return a.usagef(in.verb, "too many arguments")
 	}
 	if code := a.connect(); code != exitOK {
 		return code
@@ -23,7 +23,7 @@ func runPing(a *app, in *input) int {
 // answers, warning on a mismatch. It never diagnoses or retries.
 func runVersion(a *app, in *input) int {
 	if len(in.args) > 0 {
-		return a.usagef(lookup("version"), "too many arguments")
+		return a.usagef(in.verb, "too many arguments")
 	}
 	fmt.Fprintf(a.stdout, "idea %s (api %d)\n", Version, api.APIVersion)
 	h, err := home.Resolve()

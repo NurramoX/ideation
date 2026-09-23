@@ -40,5 +40,5 @@ func runHelp(a *app, in *input) int {
 		}
 		return a.usage("unknown verb '%s'; see `idea help`", in.args[0])
 	}
-	return a.usagef(lookup("help"), "too many arguments")
+	return a.usagef(in.verb, "too many arguments")
 }

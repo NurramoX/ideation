@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"errors"
 	"fmt"
 
 	tea "charm.land/bubbletea/v2"
@@ -101,9 +100,8 @@ func (m *model) bodyWritten(msg bodyWrittenMsg) tea.Cmd {
 		return nil
 	}
 	if msg.err != nil {
-		var pe *client.ProblemError
-		if errors.As(msg.err, &pe) && pe.Problem.Status == 412 {
-			e.current = pe.Problem.CurrentVersion
+		if current, ok := client.Stale(msg.err); ok {
+			e.current = current
 			m.mode = modeConflict
 			return nil
 		}

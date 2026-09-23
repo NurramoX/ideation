@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"net/http"
 	"os"
 	"strings"
 
@@ -9,6 +10,7 @@ import (
 	"charm.land/glamour/v2/styles"
 
 	"github.com/NurramoX/ideation/internal/api"
+	"github.com/NurramoX/ideation/internal/client"
 )
 
 // previewTickMsg fires once the selection has rested on id for previewDelay.
@@ -67,7 +69,7 @@ func (m *model) previewed(msg previewMsg) {
 	case msg.err != nil:
 		delete(m.cache, msg.id)
 		m.missing[msg.id] = msg.err.Error()
-		if problemStatus(msg.err) == 404 {
+		if client.Status(msg.err) == http.StatusNotFound {
 			m.missing[msg.id] = "deleted"
 			m.updateRow(msg.id, func(r *row) { r.deleted = true })
 		}

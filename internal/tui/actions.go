@@ -1,8 +1,8 @@
 package tui
 
 import (
-	"errors"
 	"fmt"
+	"net/http"
 	"slices"
 	"strings"
 
@@ -11,15 +11,6 @@ import (
 	"github.com/NurramoX/ideation/internal/api"
 	"github.com/NurramoX/ideation/internal/client"
 )
-
-// problemStatus is the HTTP status of a *client.ProblemError, 0 otherwise.
-func problemStatus(err error) int {
-	var pe *client.ProblemError
-	if errors.As(err, &pe) {
-		return pe.Problem.Status
-	}
-	return 0
-}
 
 // statusMsg is the answer to a Status change and the mark-reviewed after it.
 type statusMsg struct {
@@ -214,7 +205,7 @@ func (m *model) deleteKey(k tea.KeyPressMsg) tea.Cmd {
 
 func (m *model) deleted(msg deletedMsg) tea.Cmd {
 	if msg.err != nil {
-		if problemStatus(msg.err) == 412 {
+		if client.Status(msg.err) == http.StatusPreconditionFailed {
 			m.setError(fmt.Errorf("idea %d changed, not deleted", msg.id))
 			return m.reloadIfShown(msg.id)
 		}

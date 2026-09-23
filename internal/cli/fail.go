@@ -42,7 +42,7 @@ func (a *app) problem(pe *client.ProblemError) {
 
 // failWrite reports the error of a write guarded by pre, spelling out a 412.
 func (a *app) failWrite(id int64, pre api.Precondition, err error) int {
-	if cur, ok := stale(err); ok && !a.json {
+	if cur, ok := client.Stale(err); ok && !a.json {
 		a.changed(id, pre, cur)
 		return exitStale
 	}
@@ -58,20 +58,10 @@ func (a *app) changed(id int64, pre api.Precondition, current int64) {
 // caret under the position of a parse error.
 func (a *app) failFilter(src string, err error) int {
 	code := a.fail(err)
-	var pe *client.ProblemError
-	if errors.As(err, &pe) && pe.Problem.Status == http.StatusBadRequest && pe.Problem.Position > 0 && !a.json {
-		fmt.Fprintln(a.stderr, filter.Caret(src, pe.Problem.Position))
+	if pos, _, ok := client.FilterError(err); ok && !a.json {
+		fmt.Fprintln(a.stderr, filter.Caret(src, pos))
 	}
 	return code
-}
-
-// stale reports whether err is a 412, with the idea's current Version.
-func stale(err error) (current int64, ok bool) {
-	var pe *client.ProblemError
-	if errors.As(err, &pe) && pe.Problem.Status == http.StatusPreconditionFailed {
-		return pe.Problem.CurrentVersion, true
-	}
-	return 0, false
 }
 
 // statusCode maps an HTTP status to an exit code.

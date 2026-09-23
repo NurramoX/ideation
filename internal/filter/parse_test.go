@@ -99,7 +99,7 @@ func TestParse(t *testing.T) {
 
 		// Ids.
 		{"id:12", ID{12}},
-		{"ID:007", ID{7}},
+		{"ID:7", ID{7}}, // keys match lowercased
 		{`id:"12"`, ID{12}},
 		{"id:1,2", Or{[]Expr{ID{1}, ID{2}}}},
 		{"id:9223372036854775807", ID{9223372036854775807}},
@@ -222,6 +222,7 @@ func TestParseErrors(t *testing.T) {
 		{"id:-1", 4, "id"},
 		{"id:+1", 4, "id"},
 		{"id:1.5", 4, "id"},
+		{"id:007", 4, "id"},
 		{"id:9223372036854775808", 4, "id"},
 		{"has:id", 5, "has:id"},
 		{"has:TITLE", 5, "has:title"},

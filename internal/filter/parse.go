@@ -2,10 +2,11 @@ package filter
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/NurramoX/ideation/internal/api"
 )
 
 // Parse parses src. Periods are read in now's location, and relative
@@ -250,17 +251,9 @@ func (p *parser) keyed(key string, v token) (Expr, error) {
 
 // id reads v as an id: a plain decimal number.
 func (p *parser) id(v token) (Expr, error) {
-	bad := func() (Expr, error) {
+	n, ok := api.ParseID(v.s)
+	if !ok {
 		return nil, p.errorf(v.start, "id:%s is not an id; an id is a plain decimal number", v.s)
-	}
-	for _, r := range v.s {
-		if r < '0' || r > '9' {
-			return bad()
-		}
-	}
-	n, err := strconv.ParseInt(v.s, 10, 64)
-	if err != nil {
-		return bad()
 	}
 	return ID{n}, nil
 }

@@ -14,7 +14,7 @@ import (
 var sorts = []string{"updated", "created", "reviewed", "title", "rank"}
 
 func runLs(a *app, in *input) int {
-	v := lookup("ls")
+	v := in.verb
 	p := client.ListParams{Filter: strings.Join(in.args, " ")}
 	var err error
 	if s, ok := in.value("--sort"); ok {
@@ -96,7 +96,7 @@ func (a *app) listTable(ideas []api.Meta) {
 
 func runTags(a *app, in *input) int {
 	if len(in.args) > 0 {
-		return a.usagef(lookup("tags"), "too many arguments")
+		return a.usagef(in.verb, "too many arguments")
 	}
 	if code := a.connect(); code != exitOK {
 		return code
@@ -119,7 +119,7 @@ func runTags(a *app, in *input) int {
 
 func runAttrs(a *app, in *input) int {
 	if len(in.args) > 1 {
-		return a.usagef(lookup("attrs"), "at most one key")
+		return a.usagef(in.verb, "at most one key")
 	}
 	if code := a.connect(); code != exitOK {
 		return code

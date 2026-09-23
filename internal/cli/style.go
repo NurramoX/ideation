@@ -1,5 +1,7 @@
 package cli
 
+import "github.com/NurramoX/ideation/internal/api"
+
 // style colours human output, or does nothing when colour is off.
 type style struct{ on bool }
 
@@ -16,11 +18,11 @@ func (s style) dim(x string) string  { return s.wrap("2", x) }
 // status colours a Status value: open ones bright, closed ones dim.
 func (s style) status(x string) string {
 	switch x {
-	case "raw":
+	case api.StatusRaw:
 		return s.wrap("33", x)
-	case "active":
+	case api.StatusActive:
 		return s.wrap("32", x)
-	case "done":
+	case api.StatusDone:
 		return s.wrap("34", x)
 	}
 	return s.dim(x)

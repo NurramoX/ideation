@@ -10,13 +10,13 @@ import (
 type labelCall func(ctx context.Context, id int64, pre api.Precondition, item string) (version int64, err error)
 
 func runTag(a *app, in *input) int {
-	return a.labels(lookup("tag"), in, nil, func(ctx context.Context, id int64, pre api.Precondition, tag string) (int64, error) {
+	return a.labels(in.verb, in, nil, func(ctx context.Context, id int64, pre api.Precondition, tag string) (int64, error) {
 		return a.c.PutTag(ctx, id, pre, tag)
 	})
 }
 
 func runUntag(a *app, in *input) int {
-	return a.labels(lookup("untag"), in, nil, func(ctx context.Context, id int64, pre api.Precondition, tag string) (int64, error) {
+	return a.labels(in.verb, in, nil, func(ctx context.Context, id int64, pre api.Precondition, tag string) (int64, error) {
 		return a.c.DeleteTag(ctx, id, pre, tag)
 	})
 }
@@ -26,23 +26,23 @@ func runSet(a *app, in *input) int {
 		_, _, err := splitKV(s)
 		return err
 	}
-	return a.labels(lookup("set"), in, check, func(ctx context.Context, id int64, pre api.Precondition, kv string) (int64, error) {
+	return a.labels(in.verb, in, check, func(ctx context.Context, id int64, pre api.Precondition, kv string) (int64, error) {
 		k, v, _ := splitKV(kv)
 		return a.c.PutAttribute(ctx, id, pre, k, v)
 	})
 }
 
 func runUnset(a *app, in *input) int {
-	return a.labels(lookup("unset"), in, nil, func(ctx context.Context, id int64, pre api.Precondition, key string) (int64, error) {
+	return a.labels(in.verb, in, nil, func(ctx context.Context, id int64, pre api.Precondition, key string) (int64, error) {
 		return a.c.DeleteAttribute(ctx, id, pre, key)
 	})
 }
 
 func runStatus(a *app, in *input) int {
 	if len(in.args) != 2 {
-		return a.usagef(lookup("status"), "an id and one status are required")
+		return a.usagef(in.verb, "an id and one status are required")
 	}
-	return a.labels(lookup("status"), in, nil, func(ctx context.Context, id int64, pre api.Precondition, value string) (int64, error) {
+	return a.labels(in.verb, in, nil, func(ctx context.Context, id int64, pre api.Precondition, value string) (int64, error) {
 		return a.c.PutAttribute(ctx, id, pre, api.StatusKey, value)
 	})
 }

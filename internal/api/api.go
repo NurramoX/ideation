@@ -176,3 +176,19 @@ func ParseETag(s string) (version int64, ok bool) {
 	v, err := strconv.ParseInt(s, 10, 64)
 	return v, err == nil && v > 0
 }
+
+// ParseID reads an idea id: a plain decimal number, at least 1, that fits an
+// int64, written without leading zeros. Signs, spaces and anything else are
+// rejected.
+func ParseID(s string) (int64, bool) {
+	if s == "" || s[0] == '0' {
+		return 0, false
+	}
+	for _, c := range s {
+		if c < '0' || c > '9' {
+			return 0, false
+		}
+	}
+	id, err := strconv.ParseInt(s, 10, 64)
+	return id, err == nil && id >= 1
+}

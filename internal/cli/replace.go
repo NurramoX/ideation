@@ -3,13 +3,15 @@ package cli
 import (
 	"bytes"
 	"os"
+
+	"github.com/NurramoX/ideation/internal/client"
 )
 
 // replaceRetries is how often replace re-reads and retries after a 412.
 const replaceRetries = 3
 
 func runReplace(a *app, in *input) int {
-	v := lookup("replace")
+	v := in.verb
 	oldFile, hasOld := in.value("--old-file")
 	newFile, hasNew := in.value("--new-file")
 	want := 3
@@ -76,7 +78,7 @@ func runReplace(a *app, in *input) int {
 			return exitOK
 		}
 		// Retrying only helps when the Version came from our own read.
-		if _, ok := stale(err); ok && pre.IsZero() && attempt < replaceRetries {
+		if _, ok := client.Stale(err); ok && pre.IsZero() && attempt < replaceRetries {
 			continue
 		}
 		return a.failWrite(id, guard, err)

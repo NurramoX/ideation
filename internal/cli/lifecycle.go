@@ -21,7 +21,7 @@ const installWait = 10 * time.Second
 
 func runDaemon(a *app, in *input) int {
 	if len(in.args) > 0 {
-		return a.usagef(lookup("daemon"), "too many arguments")
+		return a.usagef(in.verb, "too many arguments")
 	}
 	h, err := home.Resolve()
 	if err != nil {
@@ -37,12 +37,12 @@ func runDaemon(a *app, in *input) int {
 
 // launchdVerb checks what install, uninstall, start and stop share: no
 // arguments and no IDEATION_HOME.
-func (a *app) launchdVerb(name string, in *input) (launchd.Agent, int) {
+func (a *app) launchdVerb(in *input) (launchd.Agent, int) {
 	if len(in.args) > 0 {
-		return launchd.Agent{}, a.usagef(lookup(name), "too many arguments")
+		return launchd.Agent{}, a.usagef(in.verb, "too many arguments")
 	}
 	if os.Getenv(home.EnvVar) != "" {
-		return launchd.Agent{}, a.usage("%s refuses to run while %s is set; launchd never uses it", name, home.EnvVar)
+		return launchd.Agent{}, a.usage("%s refuses to run while %s is set; launchd never uses it", in.verb.name, home.EnvVar)
 	}
 	ag, err := agent()
 	if err != nil {
@@ -52,7 +52,7 @@ func (a *app) launchdVerb(name string, in *input) (launchd.Agent, int) {
 }
 
 func runInstall(a *app, in *input) int {
-	ag, code := a.launchdVerb("install", in)
+	ag, code := a.launchdVerb(in)
 	if code != exitOK {
 		return code
 	}
@@ -105,7 +105,7 @@ func runInstall(a *app, in *input) int {
 }
 
 func runUninstall(a *app, in *input) int {
-	ag, code := a.launchdVerb("uninstall", in)
+	ag, code := a.launchdVerb(in)
 	if code != exitOK {
 		return code
 	}
@@ -129,7 +129,7 @@ func runUninstall(a *app, in *input) int {
 }
 
 func runStart(a *app, in *input) int {
-	ag, code := a.launchdVerb("start", in)
+	ag, code := a.launchdVerb(in)
 	if code != exitOK {
 		return code
 	}
@@ -147,7 +147,7 @@ func runStart(a *app, in *input) int {
 }
 
 func runStop(a *app, in *input) int {
-	ag, code := a.launchdVerb("stop", in)
+	ag, code := a.launchdVerb(in)
 	if code != exitOK {
 		return code
 	}

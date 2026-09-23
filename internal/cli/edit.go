@@ -7,11 +7,12 @@ import (
 	"strings"
 
 	"github.com/NurramoX/ideation/internal/api"
+	"github.com/NurramoX/ideation/internal/client"
 	"github.com/NurramoX/ideation/internal/editor"
 )
 
 func runEdit(a *app, in *input) int {
-	v := lookup("edit")
+	v := in.verb
 	if len(in.args) != 1 {
 		return a.usagef(v, "one id is required")
 	}
@@ -61,7 +62,7 @@ func runEdit(a *app, in *input) int {
 			}
 			return exitOK
 		}
-		current, ok := stale(err)
+		current, ok := client.Stale(err)
 		if !ok {
 			a.stdout.Write(text) // the user's text never gets lost
 			return a.fail(err)

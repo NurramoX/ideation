@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 
 	"github.com/NurramoX/ideation/internal/api"
 )
@@ -20,15 +19,9 @@ const maxJSON = 6*api.MaxBody + 1<<20
 // On failure it has already answered 400.
 func pathID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	s := r.PathValue("id")
-	for _, c := range s {
-		if c < '0' || c > '9' {
-			fail(w, http.StatusBadRequest, fmt.Sprintf("id %q is not a decimal number", s))
-			return 0, false
-		}
-	}
-	id, err := strconv.ParseInt(s, 10, 64)
-	if err != nil || id < 1 {
-		fail(w, http.StatusBadRequest, fmt.Sprintf("id %q is not a valid idea id", s))
+	id, ok := api.ParseID(s)
+	if !ok {
+		fail(w, http.StatusBadRequest, fmt.Sprintf("id %q is not a decimal number of at least 1", s))
 		return 0, false
 	}
 	return id, true

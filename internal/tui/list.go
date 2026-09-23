@@ -2,7 +2,6 @@ package tui
 
 import (
 	"context"
-	"errors"
 
 	tea "charm.land/bubbletea/v2"
 
@@ -60,9 +59,8 @@ func (m *model) listed(msg listMsg) tea.Cmd {
 		return nil
 	}
 	if msg.err != nil {
-		var pe *client.ProblemError
-		if errors.As(msg.err, &pe) && pe.Problem.Status == 400 && pe.Problem.Position > 0 {
-			m.filterError = filter.Caret(msg.filter, pe.Problem.Position) + "\n" + pe.Problem.Detail
+		if pos, detail, ok := client.FilterError(msg.err); ok {
+			m.filterError = filter.Caret(msg.filter, pos) + "\n" + detail
 			return nil
 		}
 		m.setError(msg.err)

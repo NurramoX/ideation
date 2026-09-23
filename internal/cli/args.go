@@ -16,6 +16,7 @@ type flagSpec struct {
 
 // input is a verb's parsed command line.
 type input struct {
+	verb *verb
 	args []string
 	vals map[string][]string
 }
@@ -25,7 +26,7 @@ type input struct {
 // `--name=value`. -h and --help are accepted by every verb. For a verb that
 // takes a Filter, an unknown `-word` is a Filter word.
 func parse(v *verb, args []string) (*input, error) {
-	in := &input{vals: map[string][]string{}}
+	in := &input{verb: v, vals: map[string][]string{}}
 	for i := 0; i < len(args); i++ {
 		s := args[i]
 		if s == "--" {
@@ -80,8 +81,8 @@ func (in *input) values(name string) []string { return in.vals[name] }
 
 // parseID reads a plain decimal id.
 func parseID(s string) (int64, error) {
-	id, err := strconv.ParseInt(s, 10, 64)
-	if err != nil || id <= 0 || strconv.FormatInt(id, 10) != s {
+	id, ok := api.ParseID(s)
+	if !ok {
 		return 0, fmt.Errorf("'%s' is not an id", s)
 	}
 	return id, nil

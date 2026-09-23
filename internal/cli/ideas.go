@@ -11,7 +11,7 @@ import (
 )
 
 func runAdd(a *app, in *input) int {
-	v := lookup("add")
+	v := in.verb
 	title := strings.Join(in.args, " ")
 	if title == "" {
 		return a.usagef(v, "a title is required")
@@ -62,7 +62,7 @@ func runAdd(a *app, in *input) int {
 }
 
 func runShow(a *app, in *input) int {
-	ids, code := a.ids(lookup("show"), in.args)
+	ids, code := a.ids(in.verb, in.args)
 	if code != exitOK {
 		return code
 	}
@@ -90,7 +90,7 @@ func runShow(a *app, in *input) int {
 }
 
 func runBody(a *app, in *input) int {
-	v := lookup("body")
+	v := in.verb
 	if len(in.args) != 1 {
 		return a.usagef(v, "one id is required")
 	}
@@ -110,7 +110,7 @@ func runBody(a *app, in *input) int {
 }
 
 func runWrite(a *app, in *input) int {
-	v := lookup("write")
+	v := in.verb
 	if len(in.args) != 1 {
 		return a.usagef(v, "one id is required")
 	}
@@ -147,7 +147,7 @@ func runWrite(a *app, in *input) int {
 }
 
 func runTitle(a *app, in *input) int {
-	v := lookup("title")
+	v := in.verb
 	if len(in.args) < 2 {
 		return a.usagef(v, "an id and a title are required")
 	}
@@ -181,7 +181,7 @@ func runTitle(a *app, in *input) int {
 }
 
 func runRm(a *app, in *input) int {
-	v := lookup("rm")
+	v := in.verb
 	ids, code := a.ids(v, in.args)
 	if code != exitOK {
 		return code
@@ -230,7 +230,7 @@ func runRm(a *app, in *input) int {
 }
 
 func runReviewed(a *app, in *input) int {
-	ids, code := a.ids(lookup("reviewed"), in.args)
+	ids, code := a.ids(in.verb, in.args)
 	if code != exitOK {
 		return code
 	}
