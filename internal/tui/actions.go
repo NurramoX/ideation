@@ -48,10 +48,12 @@ func (m *model) setIdeaStatus(status string) tea.Cmd {
 	return tea.Batch(set, m.advance())
 }
 
-func (m *model) statusSet(msg statusMsg) {
+// statusSet updates the row and, when the idea is still selected (the last
+// row does not advance), its preview.
+func (m *model) statusSet(msg statusMsg) tea.Cmd {
 	if msg.err != nil {
 		m.setError(msg.err)
-		return
+		return nil
 	}
 	m.updateRow(msg.id, func(r *row) {
 		r.Attributes = withAttr(r.Attributes, api.StatusKey, msg.status)
@@ -59,9 +61,10 @@ func (m *model) statusSet(msg statusMsg) {
 	})
 	if msg.markErr != nil {
 		m.setError(msg.markErr)
-		return
+	} else {
+		m.noteReviewed(msg.id)
 	}
-	m.noteReviewed(msg.id)
+	return m.reloadIfShown(msg.id)
 }
 
 // withAttr returns a copy of attrs with key set to value.
@@ -220,6 +223,7 @@ func (m *model) deleted(msg deletedMsg) tea.Cmd {
 	}
 	m.updateRow(msg.id, func(r *row) { r.deleted = true })
 	delete(m.cache, msg.id)
+	m.missing[msg.id] = "deleted"
 	m.setStatus(fmt.Sprintf("deleted idea %d", msg.id))
 	if id, ok := m.selectedID(); ok && id == msg.id {
 		return m.advance()

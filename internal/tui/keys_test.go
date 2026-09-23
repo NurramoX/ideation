@@ -88,6 +88,17 @@ func TestStatusKeysSetStatusThenMarkReviewedAndAdvance(t *testing.T) {
 	}
 }
 
+func TestAStatusChangeOnTheLastRowRefreshesItsPreview(t *testing.T) {
+	h := newHarness(t, threeIdeas(), "")
+	h.press("G", "d")
+	if h.selected() != 3 {
+		t.Fatalf("selected %d, want to stay on 3", h.selected())
+	}
+	if v := h.view(); !strings.Contains(v, "#3 · done") || !strings.Contains(v, "v2") {
+		t.Errorf("preview not refreshed:\n%s", v)
+	}
+}
+
 func TestAFailedStatusChangeShowsTheErrorAndDoesNotMarkReviewed(t *testing.T) {
 	fc := threeIdeas()
 	fc.failNext["PUT 1 attribute"] = problem(422, "bad status")

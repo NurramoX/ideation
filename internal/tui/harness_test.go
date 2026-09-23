@@ -32,6 +32,8 @@ func newHarness(t *testing.T, fc *fakeClient, filter string) *harness {
 		return func() tea.Msg { return fn(c.Run()) }
 	}
 	h := &harness{t: t, m: m, fc: fc}
+	// Run closes a round-trip left open when the TUI exits; so does the test.
+	t.Cleanup(m.abortEdit)
 	h.run(m.Init())
 	h.send(tea.WindowSizeMsg{Width: 120, Height: 30})
 	return h

@@ -146,7 +146,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case reviewedMsg:
 		m.markedReviewed(msg)
 	case statusMsg:
-		m.statusSet(msg)
+		cmd = m.statusSet(msg)
 	case tagsMsg:
 		cmd = m.retagged(msg)
 	case deletedMsg:

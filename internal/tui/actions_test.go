@@ -85,6 +85,17 @@ func TestDeleteAfterYesIsGuardedByThePreviewVersionAndAdvances(t *testing.T) {
 	}
 }
 
+func TestDeletingTheLastRowShowsItDeleted(t *testing.T) {
+	h := newHarness(t, threeIdeas(), "")
+	h.press("G", "D", "y")
+	if h.selected() != 3 {
+		t.Fatalf("selected %d, want to stay on 3", h.selected())
+	}
+	if v := h.view(); strings.Contains(v, "loading…") || !strings.Contains(v, "deleted") {
+		t.Errorf("preview does not say deleted:\n%s", v)
+	}
+}
+
 func TestDeleteAnythingButYesKeeps(t *testing.T) {
 	for _, key := range []string{"n", "N", "esc", "enter"} {
 		fc := threeIdeas()
