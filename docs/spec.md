@@ -190,6 +190,7 @@ Decided in [HTTP API surface](https://github.com/NurramoX/ideation/issues/7), wi
 - `sort` is one of `updated|created|reviewed|title|rank` and `order` is `asc|desc`. The default is `rank` when a ranked text term is present, otherwise `updated desc`. `sort=rank` without a ranked term is a `400`.
 - `sort=reviewed` treats never-reviewed as oldest.
 - `limit` and `offset` exist, with no default limit and no cursors.
+- An unknown or repeated query parameter is a `400`, so a typo such as `filtr=` is caught rather than ignored.
 - An absent `filter` means all ideas.
 
 **Version.**

@@ -14,3 +14,11 @@ func TestParseID(t *testing.T) {
 		}
 	}
 }
+
+func TestLowerLabel(t *testing.T) {
+	for in, want := range map[string]string{"Rust": "rust", "SIDE-Project_2": "side-project_2", "RÜST": "rÜst", "\u212a": "\u212a"} { // the Kelvin sign is not ASCII
+		if got := LowerLabel(in); got != want {
+			t.Errorf("LowerLabel(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

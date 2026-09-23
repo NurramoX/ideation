@@ -5,6 +5,7 @@ package api
 import (
 	"encoding/json"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -191,4 +192,16 @@ func ParseID(s string) (int64, bool) {
 	}
 	id, err := strconv.ParseInt(s, 10, 64)
 	return id, err == nil && id >= 1
+}
+
+// LowerLabel lowercases a tag, an attribute key or a Status value the way the
+// server does: ASCII letters only. Anything else is left as written, and a
+// label that is not ASCII fails validation anyway.
+func LowerLabel(s string) string {
+	return strings.Map(func(r rune) rune {
+		if r >= 'A' && r <= 'Z' {
+			return r + 'a' - 'A'
+		}
+		return r
+	}, s)
 }
