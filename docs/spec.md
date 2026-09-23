@@ -48,7 +48,7 @@ An **idea** carries: `id`, `title`, `body`, a set of `tags`, a set of `attribute
 | `title` | Separate from the body; the server never parses the body for it. 1–400 characters after trimming, single line, no control characters, not unique. |
 | `body` | Markdown, stored byte-exact, valid UTF-8, at most 10 MB (`413` over). May be empty, stored as `""`, never null. No frontmatter. |
 | tag | A bare label, its own concept rather than an attribute. `[a-z0-9][a-z0-9_-]*` with input lowercased, at most 128 bytes, at most 128 per idea. Returned sorted. |
-| attribute | `key → value`, exactly one value per key. The key follows the tag rules. The value is single-line UTF-8, 1–2000 bytes, trimmed, case preserved; an empty value is rejected (remove the key instead). At most 128 per idea. Returned sorted by key. |
+| attribute | `key → value`, exactly one value per key. The key follows the tag rules. The value is single-line UTF-8 (no LF, CR, VT, FF, NEL, U+2028 or U+2029; tabs are fine), 1–2000 bytes, trimmed, case preserved; an empty value is rejected (remove the key instead). At most 128 per idea. Returned sorted by key. |
 | reserved keys | `id`, `title`, `body`, `tag`, `has`, `created`, `updated`, `reviewed` can never be attribute keys. |
 | `version` | An integer. It advances, together with `updated_at`, only on a real change; a no-op write moves neither. |
 | `created_at`, `updated_at`, `reviewed_at` | RFC 3339 UTC with millisecond precision (`2026-09-22T14:03:07.412Z`). `reviewed_at` is null until the first review. |
@@ -136,8 +136,9 @@ STRING := "..." with "" for a literal quote
 ```
 
 **Syntax rules.**
-- Keys match lowercased.
-- A value or text term needs quotes when it contains whitespace, `(`, `)`, `:`, `,` or `"`, starts with `-`, or is the word `or`.
+- Keys, and `tag:` and `has:` values, match lowercased: ASCII letters only, as labels are lowercased.
+- A word right before `:` is a key, even `or`: `or:x` tests the attribute `or`.
+- A value or text term needs quotes when it contains whitespace, `(`, `)`, `:`, `,` or `"`, starts with `-`, or is the word `or` in any case; an unquoted value that starts with `-` or is `or` is a parse error.
 - There are no `<`/`>` operators, no wildcards, no prefix match and no ordering on attribute values.
 
 | Key | Example | Meaning |
@@ -158,6 +159,7 @@ STRING := "..." with "" for a literal quote
 **Dates.**
 - A **period** is `2026`, `2026-09`, `2026-09-01`, `today` or a full RFC 3339 instant; `created:2026-09` means during September.
 - A **range** is `a..b`, `a..` or `..b`, both ends inclusive. An end is a period or a **relative instant**, `90d`, `2w`, `6m` or `1y`, meaning that long before now.
+- `today` and the relative units are lowercase only; `90D` or `Today` is a parse error.
 - A lone relative instant (`created:7d`) is a parse error that points at the range spelling.
 - Periods are read in the machine's local time zone.
 - A null `reviewed` satisfies no date term, so "never reviewed" is `-has:reviewed`, and the **Review queue** is `status:raw,active -reviewed:90d..`.
@@ -190,10 +192,11 @@ Decided in [HTTP API surface](https://github.com/NurramoX/ideation/issues/7), wi
 - `sort` is one of `updated|created|reviewed|title|rank` and `order` is `asc|desc`. The default is `rank` when a ranked text term is present, otherwise `updated desc`. `sort=rank` without a ranked term is a `400`.
 - `sort=reviewed` treats never-reviewed as oldest.
 - `limit` and `offset` exist, with no default limit and no cursors.
+- An unknown or repeated query parameter is a `400`, so a typo such as `filtr=` is caught rather than ignored.
 - An absent `filter` means all ideas.
 
 **Version.**
-- Every response exposes the Version as `ETag` and as `version`, and every successful write returns the new `ETag`.
+- Every response about one idea exposes its Version as `ETag` and as `version`, and every successful write returns the new `ETag`. Lists, the vocabulary and `GET /` carry no single Version and send no `ETag`.
 - `If-Match` is **required** on `PATCH`, `PUT /body` and `DELETE /ideas/{id}`:
   - missing → `428`
   - stale → `412` with `current_version`
@@ -226,7 +229,7 @@ Decided in [Daemon lifecycle and local HTTP exposure](https://github.com/Nurramo
 - `IDEATION_HOME`, read the same way by daemon and CLI, replaces the root for tests and dev builds.
 - The launchd job never sets `IDEATION_HOME`.
 
-**Socket.** `<home>/ideation.sock`, `chmod`ed to `0600` after bind. There is never a TCP listener, and there is no token or peer check. The daemon refuses to start if the socket path exceeds 104 bytes.
+**Socket.** `<home>/ideation.sock`, `chmod`ed to `0600` after bind. There is never a TCP listener, and there is no token or peer check. The daemon refuses to start if the socket path exceeds 103 bytes: macOS's `sun_path` holds 104 including the terminating NUL.
 
 **Single instance.** The first act of `idea daemon` is `flock(LOCK_EX|LOCK_NB)` on `daemon.lock`, held for the life of the process.
 - If another process holds the lock, the daemon exits non-zero with "already running" and touches nothing.
@@ -276,7 +279,7 @@ Decided in [CLI command surface](https://github.com/NurramoX/ideation/issues/9),
 |---|---|
 | `add <title> [-t <tag>]... [-s <k>=<v>]... [--body-file <path>\|-] [--edit]` | One `POST /ideas`. Reads the body from stdin only with an explicit `-`, never by sniffing whether stdin is a tty; otherwise the body is empty. `--edit` opens the editor first and creates on save. Prints exactly the new id. |
 | `show <id>...` | Human output: a header block (title, id, status, tags, attributes, version, dates), a blank line, then the body; several ideas are separated by `---`. `--json`: one envelope per line (JSON Lines). |
-| `ls [<filter words>...] [--sort updated\|created\|reviewed\|title\|rank] [--asc\|--desc] [--limit n] [--offset n] [-q\|--json]` | The Filter is the positionals joined by single spaces; `--` guards a leading `-`. Human output: an aligned table of id, status, title, tags and snippet, plus `N ideas` on stderr when `total` exceeds what is shown. `-q`: ids only. `--json`: `{ideas, total}` verbatim. `-q` with `--json` → exit 2. An empty result is exit 0 plus the vocabulary hint. |
+| `ls [<filter words>...] [--sort updated\|created\|reviewed\|title\|rank] [--asc\|--desc] [--limit n] [--offset n] [-q\|--json]` | The Filter is the positionals joined by single spaces. An unknown single-dash word (`-has:effort`) is a negated term, here and in `review`; `--` guards one that is also a flag (`-q`, `-h`). Human output: an aligned table of id, status, title, tags and snippet, plus `N ideas` on stderr when `total` exceeds what is shown. `-q`: ids only. `--json`: `{ideas, total}` verbatim. `-q` with `--json` → exit 2. An empty result is exit 0 plus the vocabulary hint. |
 | `body <id>` | The raw body, byte-exact. |
 | `write <id> --version <n>\|--force [--body-file <path>]` | Reads the body from stdin by default. Refuses (exit 2) without `--version` or `--force`. Empty input writes an empty body. |
 | `replace <id> <old> <new> [--old-file p] [--new-file p] [--all]` | Read, literal byte-exact replace, guarded write. `<old>` must occur exactly once unless `--all`; zero or several matches → exit 5 with the count. An empty `<old>` → exit 2, and an empty `<new>` deletes. On a `412` it re-reads and retries the whole operation up to 3 times, then exits 4. It is the only verb that retries. |
@@ -419,7 +422,7 @@ Decided in [Review TUI](https://github.com/NurramoX/ideation/issues/8). It is te
 
 **Conflicts.**
 - A `412` on delete shows "changed, not deleted" and refreshes the preview.
-- A `412` after the editor offers `[o]verwrite / [r]e-edit / [a]bort`. **Abort** prints the user's text to stdout after the TUI exits and the terminal is restored.
+- A `412` after the editor offers `[o]verwrite / [r]e-edit / [a]bort`. **Re-edit** shows the other party's current body in the preview rather than on stderr, which the TUI hides, and reopens the user's text on `enter`. **Abort** prints the user's text to stdout after the TUI exits and the terminal is restored.
 
 ## 9. Agent skill
 
