@@ -36,18 +36,20 @@ func title(t string) (string, error) {
 	if n := utf8.RuneCountInString(t); n > maxTitleRunes {
 		return "", invalid("title is %d characters, at most %d allowed", n, maxTitleRunes)
 	}
-	if !singleLine(t) {
+	if strings.ContainsFunc(t, func(r rune) bool { return unicode.IsControl(r) || lineBreak(r) }) {
 		return "", invalid("title must be a single line without control characters")
 	}
 	return t, nil
 }
 
-// singleLine reports whether s has no control characters and no line or
-// paragraph separator.
-func singleLine(s string) bool {
-	return !strings.ContainsFunc(s, func(r rune) bool {
-		return unicode.IsControl(r) || r == '\u2028' || r == '\u2029'
-	})
+// lineBreak reports whether r ends a line: LF, VT, FF, CR, NEL, or the line
+// or paragraph separator.
+func lineBreak(r rune) bool {
+	switch r {
+	case '\n', '\v', '\f', '\r', '\u0085', '\u2028', '\u2029':
+		return true
+	}
+	return false
 }
 
 // body checks a body: at most api.MaxBody bytes (ErrTooLarge) of valid UTF-8.
@@ -65,7 +67,7 @@ func body(b string) error {
 // [a-z0-9][a-z0-9_-]* and the length limit. Only ASCII is lowercased, since
 // nothing else can pass.
 func label(what, s string) (string, error) {
-	s = asciiLower(s)
+	s = api.LowerLabel(s)
 	if s == "" {
 		return "", invalid("%s is empty", what)
 	}
@@ -80,15 +82,6 @@ func label(what, s string) (string, error) {
 		}
 	}
 	return s, nil
-}
-
-func asciiLower(s string) string {
-	return strings.Map(func(r rune) rune {
-		if r >= 'A' && r <= 'Z' {
-			return r + 'a' - 'A'
-		}
-		return r
-	}, s)
 }
 
 func tag(s string) (string, error) { return label("tag", s) }
@@ -123,8 +116,9 @@ func key(s string) (string, error) {
 	return k, nil
 }
 
-// value trims and checks the value of attribute k: single-line UTF-8 of
-// 1–2000 bytes. Status is lowercased and must be one of api.Statuses.
+// value trims and checks the value of attribute k: UTF-8 of 1–2000 bytes on a
+// single line (tabs and other control characters are fine, line breaks are
+// not). Status is lowercased and must be one of api.Statuses.
 func value(k, v string) (string, error) {
 	v = strings.TrimSpace(v)
 	if !utf8.ValidString(v) {
@@ -136,11 +130,11 @@ func value(k, v string) (string, error) {
 	if len(v) > maxValueBytes {
 		return "", invalid("value of %q is %d bytes, at most %d allowed", k, len(v), maxValueBytes)
 	}
-	if !singleLine(v) {
-		return "", invalid("value of %q must be a single line without control characters", k)
+	if strings.ContainsFunc(v, lineBreak) {
+		return "", invalid("value of %q must be a single line", k)
 	}
 	if k == api.StatusKey {
-		v = strings.ToLower(v)
+		v = api.LowerLabel(v)
 		if !slices.Contains(api.Statuses, v) {
 			return "", invalid("status %q is not one of %s", v, strings.Join(api.Statuses, ", "))
 		}

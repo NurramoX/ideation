@@ -97,7 +97,7 @@ func (m *model) applyTags(want []string) tea.Cmd {
 		return nil
 	}
 	for i, t := range want {
-		want[i] = strings.ToLower(t) // the server lowercases; compare as it will
+		want[i] = api.LowerLabel(t) // the server lowercases; compare as it will
 	}
 	have := r.Tags
 	var add, del []string

@@ -118,7 +118,7 @@ func (s *sqliteStore) AttributeValues(ctx context.Context, key string) ([]api.Va
 	out := []api.ValueCount{}
 	err := each(ctx, s.db, `
 		SELECT value, count(*) FROM idea_attribute WHERE key = ?
-		GROUP BY value ORDER BY value`, []any{asciiLower(key)}, func(r *sql.Rows) error {
+		GROUP BY value ORDER BY value`, []any{api.LowerLabel(key)}, func(r *sql.Rows) error {
 		var c api.ValueCount
 		if err := r.Scan(&c.Value, &c.Count); err != nil {
 			return err
